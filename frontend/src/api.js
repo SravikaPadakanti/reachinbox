@@ -13,10 +13,32 @@ export const API =
     ? "http://localhost:4000"
     : PROD_API_URL;
 
+export function getToken() {
+  try {
+    return localStorage.getItem("reachinbox_token");
+  } catch {
+    return null;
+  }
+}
+
+export function setToken(token) {
+  try {
+    if (token) localStorage.setItem("reachinbox_token", token);
+    else localStorage.removeItem("reachinbox_token");
+  } catch {}
+}
+
 async function req(path, opts = {}) {
+  const token = getToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(opts.headers || {}),
+  };
+
   const res = await fetch(API + path, {
-    credentials: "include", // session cookie
-    headers: { "Content-Type": "application/json" },
+    credentials: "include", // session cookie fallback
+    headers,
     ...opts,
   });
   let data = null;
@@ -44,9 +66,19 @@ export const api = {
     return `${API}/auth/google?redirect_to=${encodeURIComponent(origin)}`;
   },
   testLoginUrl: `${API}/auth/test-login`,
-  login: (body = {}) => req("/auth/login", { method: "POST", body: JSON.stringify(body) }),
+  login: async (body = {}) => {
+    const data = await req("/auth/login", { method: "POST", body: JSON.stringify(body) });
+    if (data?.token) setToken(data.token);
+    return data;
+  },
   me: () => req("/auth/me"),
-  logout: () => req("/auth/logout", { method: "POST" }),
+  logout: async () => {
+    try {
+      await req("/auth/logout", { method: "POST" });
+    } finally {
+      setToken(null);
+    }
+  },
   scheduled: () => req("/api/emails/scheduled"),
   sent: () => req("/api/emails/sent"),
   email: (id) => req(`/api/emails/${id}`),

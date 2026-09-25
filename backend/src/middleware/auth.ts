@@ -1,8 +1,38 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Router } from "express";
+import crypto from "crypto";
 import { env } from "../config/env";
 import { prisma } from "../db/prisma";
+
+export function generateAuthToken(user: any): string {
+  const payload = JSON.stringify({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    ts: Date.now(),
+  });
+  const hmac = crypto
+    .createHmac("sha256", env.sessionSecret)
+    .update(payload)
+    .digest("hex");
+  return Buffer.from(JSON.stringify({ payload, hmac })).toString("base64url");
+}
+
+export function verifyAuthToken(tokenStr: string): any | null {
+  try {
+    const raw = Buffer.from(tokenStr, "base64url").toString("utf-8");
+    const { payload, hmac } = JSON.parse(raw);
+    const expected = crypto
+      .createHmac("sha256", env.sessionSecret)
+      .update(payload)
+      .digest("hex");
+    if (hmac !== expected) return null;
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
+}
 
 passport.use(
   new GoogleStrategy(
@@ -51,9 +81,26 @@ passport.deserializeUser(async (id: string, done) => {
 export const authRouter = Router();
 
 // Use on any route that must only see/act on the logged-in user's own data.
-export function requireAuth(req: any, res: any, next: any) {
-  if (!req.user) return res.status(401).json({ error: "not authenticated" });
-  next();
+export async function requireAuth(req: any, res: any, next: any) {
+  if (req.user) return next();
+
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    const tokenData = verifyAuthToken(token);
+    if (tokenData?.id) {
+      let u = await prisma.user.findUnique({ where: { id: tokenData.id } });
+      if (!u && tokenData.email) {
+        u = await prisma.user.findUnique({ where: { email: tokenData.email } });
+      }
+      if (u) {
+        req.user = u;
+        return next();
+      }
+    }
+  }
+
+  return res.status(401).json({ error: "not authenticated" });
 }
 
 authRouter.get(
@@ -99,13 +146,28 @@ authRouter.get(
         target = u.origin;
       } catch {}
     }
-    res.redirect(`${target}/dashboard`);
+    const token = generateAuthToken(req.user);
+    res.redirect(`${target}/dashboard?auth_token=${token}`);
   }
 );
 
-authRouter.get("/me", (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "not authenticated" });
-  res.json(req.user);
+authRouter.get("/me", async (req, res) => {
+  if (req.user) return res.json(req.user);
+
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    const tokenData = verifyAuthToken(token);
+    if (tokenData?.id) {
+      let u = await prisma.user.findUnique({ where: { id: tokenData.id } });
+      if (!u && tokenData.email) {
+        u = await prisma.user.findUnique({ where: { email: tokenData.email } });
+      }
+      if (u) return res.json(u);
+    }
+  }
+
+  return res.status(401).json({ error: "not authenticated" });
 });
 
 authRouter.post("/logout", (req, res) => {
@@ -121,7 +183,8 @@ authRouter.get("/test-login", async (req, res) => {
   if (!testUser) return res.status(400).json({ error: "Test user not found" });
   req.login(testUser, (err) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.redirect(`${env.frontendUrl}/dashboard`);
+    const token = generateAuthToken(testUser);
+    res.redirect(`${env.frontendUrl}/dashboard?auth_token=${token}`);
   });
 });
 
@@ -156,7 +219,8 @@ authRouter.post("/login", async (req, res) => {
 
     req.login(user, (err) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.json(user);
+      const token = generateAuthToken(user);
+      res.json({ ...user, token });
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

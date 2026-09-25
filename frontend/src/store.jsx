@@ -27,7 +27,29 @@ export function Store({ children }) {
   }, [toast]);
 
   useEffect(() => {
-    api.me().then(setUser).catch(() => setUser(null));
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get("auth_token");
+      if (urlToken) {
+        try {
+          localStorage.setItem("reachinbox_token", urlToken);
+        } catch {}
+        params.delete("auth_token");
+        const cleanQuery = params.toString() ? `?${params.toString()}` : "";
+        const cleanUrl = window.location.pathname + cleanQuery + window.location.hash;
+        window.history.replaceState(null, "", cleanUrl);
+      }
+    }
+
+    api
+      .me()
+      .then(setUser)
+      .catch(() => {
+        try {
+          localStorage.removeItem("reachinbox_token");
+        } catch {}
+        setUser(null);
+      });
   }, []);
 
   // Poll every 10s while logged in
@@ -38,7 +60,15 @@ export function Store({ children }) {
     return () => clearInterval(t);
   }, [user, refresh]);
 
-  const logout = async () => { await api.logout().catch(() => {}); setUser(null); setScheduled([]); setSent([]); };
+  const logout = async () => {
+    await api.logout().catch(() => {});
+    try {
+      localStorage.removeItem("reachinbox_token");
+    } catch {}
+    setUser(null);
+    setScheduled([]);
+    setSent([]);
+  };
 
   return <Ctx.Provider value={{ user, setUser, scheduled, sent, health, loading, loaded, refresh, logout }}>{children}</Ctx.Provider>;
 }
