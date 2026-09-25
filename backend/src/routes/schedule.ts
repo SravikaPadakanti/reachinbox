@@ -73,7 +73,7 @@ scheduleRouter.post("/", requireAuth, async (req, res) => {
         subject: data.subject,
         body: data.body,
         fromSender: data.fromSender,
-        attachments: data.attachments,
+        attachments: data.attachments as any,
       },
       scheduledAt
     );
