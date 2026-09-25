@@ -44,6 +44,7 @@ async function processEmailJob(job: Job<EmailJobPayload>) {
 
   try {
     const { previewUrl } = await sendEmail({
+      emailJobId,
       from: fromSender,
       to: recipient,
       subject,
@@ -93,9 +94,25 @@ export const emailWorker = new Worker<EmailJobPayload>(
 );
 
 emailWorker.on("completed", (job) => console.log(`[worker] job ${job.id} completed`));
-emailWorker.on("failed", (job, err) =>
-  console.error(`[worker] job ${job?.id} failed:`, err.message)
-);
+emailWorker.on("failed", async (job, err) => {
+  console.error(`[worker] job ${job?.id} failed:`, err.message);
+  if (job?.data?.emailJobId) {
+    const maxAttempts = job.opts.attempts || 3;
+    if (job.attemptsMade >= maxAttempts) {
+      try {
+        await prisma.emailJob.update({
+          where: { id: job.data.emailJobId },
+          data: {
+            status: "FAILED",
+            failReason: err.message?.slice(0, 500) || "Send failed",
+          },
+        });
+      } catch (e: any) {
+        console.error(`[worker] failed to update emailJob on failed event:`, e.message);
+      }
+    }
+  }
+});
 
 console.log(
   `[worker] started — concurrency=${env.workerConcurrency}, minDelay=${env.minDelayBetweenEmailsMs}ms`

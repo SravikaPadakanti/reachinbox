@@ -24,24 +24,39 @@ export async function reconcileOrphanedJobs() {
 
   let requeued = 0;
   for (const row of rows) {
-    const existing = row.bullJobId ? await emailQueue.getJob(row.bullJobId) : null;
-    if (existing) continue; // queue already has it — nothing to do
+    let needsRequeue = false;
+    if (!row.bullJobId) {
+      needsRequeue = true;
+    } else {
+      const existing = await emailQueue.getJob(row.bullJobId);
+      if (!existing) {
+        needsRequeue = true;
+      } else {
+        const state = await existing.getState();
+        if (state === "failed" || state === "unknown") {
+          needsRequeue = true;
+        }
+      }
+    }
 
-    // Send immediately if the original time already passed while we were down.
-    const sendAt = row.scheduledAt.getTime() > Date.now() ? row.scheduledAt : new Date();
-    const job = await enqueueEmailJob(
-      {
-        emailJobId: row.id,
-        recipient: row.recipient,
-        subject: row.subject,
-        body: row.body,
-        fromSender: row.fromSender,
-      },
-      sendAt,
-      `reconcile-${Date.now()}` // fresh suffix avoids colliding with the dead jobId
-    );
-    await prisma.emailJob.update({ where: { id: row.id }, data: { bullJobId: job.id?.toString() } });
-    requeued++;
+    if (needsRequeue) {
+      // Send immediately if the original time already passed while we were down.
+      const sendAt = row.scheduledAt.getTime() > Date.now() ? row.scheduledAt : new Date();
+      const job = await enqueueEmailJob(
+        {
+          emailJobId: row.id,
+          recipient: row.recipient,
+          subject: row.subject,
+          body: row.body,
+          fromSender: row.fromSender,
+          attachments: (row.attachments as any) || [],
+        },
+        sendAt,
+        `reconcile-${Date.now()}` // fresh suffix avoids colliding with the dead jobId
+      );
+      await prisma.emailJob.update({ where: { id: row.id }, data: { bullJobId: job.id?.toString() } });
+      requeued++;
+    }
   }
 
   if (requeued > 0) {

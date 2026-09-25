@@ -127,3 +127,70 @@ emailsRouter.get("/:id", requireAuth, async (req, res) => {
     createdAt: job.createdAt,
   });
 });
+
+// GET /api/emails/:id/preview - Public HTML email preview viewer (similar to Ethereal web preview)
+emailsRouter.get("/:id/preview", async (req, res) => {
+  const { id } = req.params;
+  const job = await prisma.emailJob.findUnique({
+    where: { id },
+  });
+
+  if (!job) {
+    return res.status(404).send("<div style='font-family:sans-serif;padding:40px;text-align:center;'><h2>Email not found</h2></div>");
+  }
+
+  const attachments = (job.attachments as any[]) || [];
+  const statusColor = job.status === "SENT" ? "#10b981" : job.status === "FAILED" ? "#ef4444" : "#f59e0b";
+
+  const safeBody = (job.body || "").replace(/"/g, "&quot;");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${job.subject} - ReachInbox Preview</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0f172a; color: #f8fafc; }
+    .header { background: #1e293b; border-bottom: 1px solid #334155; padding: 20px 28px; }
+    .badge-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .brand { font-size: 13px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px; }
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; background: ${statusColor}22; color: ${statusColor}; border: 1px solid ${statusColor}44; }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 14px; color: #ffffff; }
+    .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; font-size: 13px; color: #94a3b8; }
+    .meta-grid b { color: #cbd5e1; }
+    .attachments-bar { margin-top: 14px; padding-top: 12px; border-top: 1px solid #334155; display: flex; gap: 8px; flex-wrap: wrap; }
+    .att-chip { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px 12px; font-size: 12px; color: #38bdf8; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .preview-container { width: 100%; height: calc(100vh - 190px); background: #ffffff; }
+    iframe { width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="badge-row">
+      <div class="brand">ReachInbox Email Delivery Inspector</div>
+      <span class="status-badge">${job.status}</span>
+    </div>
+    <h1>${job.subject}</h1>
+    <div class="meta-grid">
+      <div><b>From:</b> ${job.fromSender}</div>
+      <div><b>To:</b> ${job.recipient}</div>
+      <div><b>Time:</b> ${job.sentAt ? new Date(job.sentAt).toUTCString() : new Date(job.scheduledAt).toUTCString()}</div>
+      <div><b>Delivery ID:</b> <code>${job.id}</code></div>
+    </div>
+    ${attachments.length > 0 ? `
+      <div class="attachments-bar">
+        ${attachments.map((a: any) => `<div class="att-chip">📎 ${a.filename}</div>`).join('')}
+      </div>
+    ` : ''}
+  </div>
+  <div class="preview-container">
+    <iframe sandbox="allow-same-origin" srcdoc="${safeBody}"></iframe>
+  </div>
+</body>
+</html>`;
+
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(html);
+});

@@ -108,9 +108,9 @@ export default function EmailDetail() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="ethereal-badge"
-                  title="Open this email in Ethereal test inbox"
+                  title="Open live email delivery preview"
                 >
-                  📨 View in Ethereal Mailbox ↗
+                  📨 View Email Delivery Preview ↗
                 </a>
               </div>
             )}

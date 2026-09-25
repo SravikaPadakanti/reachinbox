@@ -23,6 +23,11 @@ export const env = {
     (process.env.NODE_ENV === "production"
       ? DEFAULT_PROD_FRONTEND
       : "http://localhost:3000"),
+  backendUrl:
+    process.env.BACKEND_URL ||
+    (process.env.NODE_ENV === "production"
+      ? "https://reachinbox-1wr6.onrender.com"
+      : "http://localhost:4000"),
 
   databaseUrl: required("DATABASE_URL"),
   redisUrl: required("REDIS_URL"),
