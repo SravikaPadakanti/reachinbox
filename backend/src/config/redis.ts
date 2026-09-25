@@ -1,9 +1,15 @@
 import IORedis from "ioredis";
 import { env } from "./env";
 
+const isTls = env.redisUrl.startsWith("rediss://") || env.redisUrl.includes("upstash.io");
+const connectionUrl = isTls && env.redisUrl.startsWith("redis://") 
+  ? env.redisUrl.replace("redis://", "rediss://") 
+  : env.redisUrl;
+
 // maxRetriesPerRequest: null is required by BullMQ's blocking connections
-export const redisConnection = new IORedis(env.redisUrl, {
+export const redisConnection = new IORedis(connectionUrl, {
   maxRetriesPerRequest: null,
+  tls: isTls ? { rejectUnauthorized: false } : undefined,
 });
 
 redisConnection.on("connect", () => {
