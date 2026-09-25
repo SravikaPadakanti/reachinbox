@@ -40,7 +40,7 @@ export async function enqueueEmailJob(
 ) {
   const delayMs = Math.max(0, sendAt.getTime() - Date.now());
   const jobId = jobIdSuffix
-    ? `${payload.emailJobId}:${jobIdSuffix}`
+    ? `${payload.emailJobId}__${jobIdSuffix}`
     : payload.emailJobId;
 
   const job = await emailQueue.add("send-email", payload, {
