@@ -1,0 +1,444 @@
+{
+  "info": {
+    "_postman_id": "reachinbox-email-scheduler",
+    "name": "Email Scheduler API",
+    "description": "Complete test suite for Email Scheduler Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Get Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 401', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Response has user properties', function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "        pm.expect(jsonData).to.have.property('email');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('Response returns ok: true', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.equal(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Schedule Email Campaign",
+      "item": [
+        {
+          "name": "Schedule Single Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 (Created)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has campaign id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('campaign');",
+                  "    pm.expect(jsonData.campaign).to.have.property('id');",
+                  "    pm.environment.set('campaign_id', jsonData.campaign.id);",
+                  "});",
+                  "",
+                  "pm.test('Response has jobs array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('jobs');",
+                  "    pm.expect(jsonData.jobs).to.be.an('array');",
+                  "    if (jsonData.jobs.length > 0) {",
+                  "        pm.environment.set('job_id', jsonData.jobs[0].id);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromSender\": \"madyson65@ethereal.email\",\n  \"recipients\": [\"test1@example.com\"],\n  \"subject\": \"Test Email - Single Recipient\",\n  \"body\": \"<h1>Hello!</h1><p>This is a test email from Email Scheduler.</p>\",\n  \"startTime\": \"{{start_time}}\",\n  \"delayBetweenEmailsMs\": 2000,\n  \"hourlyLimit\": 200,\n  \"userId\": \"test-user-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/schedule",
+              "host": ["{{base_url}}"],
+              "path": ["api", "schedule"]
+            }
+          }
+        },
+        {
+          "name": "Schedule Batch Email Campaign",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 (Created)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "",
+                  "pm.test('Campaign created successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('campaign');",
+                  "    pm.expect(jsonData.campaign.subject).to.equal('Batch Email Campaign');",
+                  "});",
+                  "",
+                  "pm.test('Multiple jobs created', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.jobs.length).to.equal(5);",
+                  "    pm.environment.set('batch_campaign_id', jsonData.campaign.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromSender\": \"madyson65@ethereal.email\",\n  \"recipients\": [\n    \"recipient1@example.com\",\n    \"recipient2@example.com\",\n    \"recipient3@example.com\",\n    \"recipient4@example.com\",\n    \"recipient5@example.com\"\n  ],\n  \"subject\": \"Batch Email Campaign\",\n  \"body\": \"<h1>Batch Email</h1><p>This is a batch email campaign test.</p>\",\n  \"startTime\": \"{{start_time}}\",\n  \"delayBetweenEmailsMs\": 3000,\n  \"hourlyLimit\": 200,\n  \"userId\": \"test-user-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/schedule",
+              "host": ["{{base_url}}"],
+              "path": ["api", "schedule"]
+            }
+          }
+        },
+        {
+          "name": "Schedule with Custom Delay",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "",
+                  "pm.test('Campaign has correct delay configuration', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.campaign.delayBetweenEmailsMs).to.equal(5000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromSender\": \"madyson65@ethereal.email\",\n  \"recipients\": [\n    \"delay1@example.com\",\n    \"delay2@example.com\",\n    \"delay3@example.com\"\n  ],\n  \"subject\": \"Campaign with Custom Delay\",\n  \"body\": \"<p>This campaign has a 5-second delay between emails.</p>\",\n  \"startTime\": \"{{start_time}}\",\n  \"delayBetweenEmailsMs\": 5000,\n  \"hourlyLimit\": 150,\n  \"userId\": \"test-user-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/schedule",
+              "host": ["{{base_url}}"],
+              "path": ["api", "schedule"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Get Email Status",
+      "item": [
+        {
+          "name": "Get Scheduled Emails",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(Array.isArray(jsonData)).to.be.true;",
+                  "});",
+                  "",
+                  "if (pm.response.json().length > 0) {",
+                  "    pm.test('Scheduled emails have required fields', function () {",
+                  "        var firstJob = pm.response.json()[0];",
+                  "        pm.expect(firstJob).to.have.property('id');",
+                  "        pm.expect(firstJob).to.have.property('email');",
+                  "        pm.expect(firstJob).to.have.property('subject');",
+                  "        pm.expect(firstJob).to.have.property('scheduledTime');",
+                  "        pm.expect(firstJob).to.have.property('status');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/emails/scheduled",
+              "host": ["{{base_url}}"],
+              "path": ["api", "emails", "scheduled"]
+            }
+          }
+        },
+        {
+          "name": "Get Sent Emails",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(Array.isArray(jsonData)).to.be.true;",
+                  "});",
+                  "",
+                  "if (pm.response.json().length > 0) {",
+                  "    pm.test('Sent emails have required fields', function () {",
+                  "        var firstJob = pm.response.json()[0];",
+                  "        pm.expect(firstJob).to.have.property('id');",
+                  "        pm.expect(firstJob).to.have.property('email');",
+                  "        pm.expect(firstJob).to.have.property('subject');",
+                  "        pm.expect(firstJob).to.have.property('sentTime');",
+                  "        pm.expect(firstJob).to.have.property('status');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/emails/sent",
+              "host": ["{{base_url}}"],
+              "path": ["api", "emails", "sent"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Error Scenarios",
+      "item": [
+        {
+          "name": "Schedule with Missing Required Field",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 (Bad Request)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test('Response contains error details', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromSender\": \"madyson65@ethereal.email\",\n  \"recipients\": [\"test@example.com\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/schedule",
+              "host": ["{{base_url}}"],
+              "path": ["api", "schedule"]
+            }
+          }
+        },
+        {
+          "name": "Schedule with Invalid Email Format",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 (Bad Request)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test('Response contains error for invalid email', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromSender\": \"invalid-email\",\n  \"recipients\": [\"also-invalid\"],\n  \"subject\": \"Test\",\n  \"body\": \"Test\",\n  \"startTime\": \"{{start_time}}\",\n  \"userId\": \"test-user-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/schedule",
+              "host": ["{{base_url}}"],
+              "path": ["api", "schedule"]
+            }
+          }
+        },
+        {
+          "name": "Schedule with Empty Recipients",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 (Bad Request)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test('Response indicates recipients array is required', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromSender\": \"madyson65@ethereal.email\",\n  \"recipients\": [],\n  \"subject\": \"Test\",\n  \"body\": \"Test\",\n  \"startTime\": \"{{start_time}}\",\n  \"userId\": \"test-user-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/schedule",
+              "host": ["{{base_url}}"],
+              "path": ["api", "schedule"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "start_time",
+      "value": "2026-09-24T23:00:00.000Z",
+      "type": "string"
+    },
+    {
+      "key": "campaign_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "job_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "batch_campaign_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
