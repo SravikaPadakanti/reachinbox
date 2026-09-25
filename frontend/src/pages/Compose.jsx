@@ -98,6 +98,7 @@ export default function Compose() {
           filename: f.filename,
           content: f.content,
           contentType: f.contentType,
+          size: f.size,
         })),
       };
       if (delay !== "") payload.delayBetweenEmailsMs = Math.round(Number(delay) * 1000); // field is in seconds
@@ -150,6 +151,7 @@ export default function Compose() {
               onBlur={commitDraft} onPaste={(e) => { e.preventDefault(); addRecipients(e.clipboardData.getData("text")); }} />
           </div>
           <button className="link-btn" onClick={() => listInput.current.click()}><Upload size={15} /> Upload List</button>
+          <button className="link-btn" onClick={() => fileInput.current.click()}><Clip size={15} /> Attach</button>
           {recipients.length > 0 && <span className="count">{recipients.length} detected</span>}
           <input ref={listInput} type="file" accept=".csv,.txt" hidden onChange={onList} />
         </div>
@@ -162,17 +164,21 @@ export default function Compose() {
         <div className="editor-box">
           <div ref={editor} className="editor" contentEditable suppressContentEditableWarning data-ph="Type Your Reply..." />
           <div className="rte">
-            <button onClick={() => fmt("undo")} aria-label="Undo">↶</button><button onClick={() => fmt("redo")} aria-label="Redo">↷</button><i />
+            <button type="button" onClick={() => fmt("undo")} aria-label="Undo">↶</button><button type="button" onClick={() => fmt("redo")} aria-label="Redo">↷</button><i />
             <select onChange={(e) => { fmt("fontSize", e.target.value); e.target.selectedIndex = 0; }} defaultValue="" aria-label="Text size">
               <option value="" disabled>Tт</option><option value="2">Small</option><option value="3">Normal</option><option value="5">Large</option></select><i />
-            <button onClick={() => fmt("bold")}><b>B</b></button><button onClick={() => fmt("italic")}><em>I</em></button><button onClick={() => fmt("underline")}><u>U</u></button><i />
-            <button onClick={() => fmt("justifyCenter")} aria-label="Center">≡</button><i />
-            <button onClick={() => fmt("insertOrderedList")} aria-label="Numbered list">1.</button>
-            <button onClick={() => fmt("insertUnorderedList")} aria-label="Bulleted list">•</button>
-            <button onClick={() => fmt("indent")} aria-label="Indent">→</button>
-            <button onClick={() => fmt("outdent")} aria-label="Outdent">←</button>
-            <button onClick={() => fmt("formatBlock", "blockquote")} aria-label="Quote">“</button><i />
-            <button onClick={() => fmt("strikeThrough")}><s>S</s></button>
+            <button type="button" onClick={() => fmt("bold")}><b>B</b></button><button type="button" onClick={() => fmt("italic")}><em>I</em></button><button type="button" onClick={() => fmt("underline")}><u>U</u></button><i />
+            <button type="button" onClick={() => fmt("justifyCenter")} aria-label="Center">≡</button><i />
+            <button type="button" onClick={() => fmt("insertOrderedList")} aria-label="Numbered list">1.</button>
+            <button type="button" onClick={() => fmt("insertUnorderedList")} aria-label="Bulleted list">•</button>
+            <button type="button" onClick={() => fmt("indent")} aria-label="Indent">→</button>
+            <button type="button" onClick={() => fmt("outdent")} aria-label="Outdent">←</button>
+            <button type="button" onClick={() => fmt("formatBlock", "blockquote")} aria-label="Quote">“</button><i />
+            <button type="button" onClick={() => fmt("strikeThrough")}><s>S</s></button><i />
+            <button type="button" onClick={() => fileInput.current.click()} title="Attach file" aria-label="Attach file" style={{ display: "flex", alignItems: "center", gap: "4px", padding: "0 6px" }}>
+              <Clip size={15} />
+              <span style={{ fontSize: "11px", fontWeight: "500" }}>Attach</span>
+            </button>
           </div>
         </div>
 

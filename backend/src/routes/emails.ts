@@ -18,6 +18,7 @@ emailsRouter.get("/scheduled", requireAuth, async (req, res) => {
       subject: j.subject,
       scheduledTime: j.scheduledAt,
       status: j.status,
+      hasAttachments: Array.isArray(j.attachments) && (j.attachments as any[]).length > 0,
     }))
   );
 });
@@ -36,6 +37,8 @@ emailsRouter.get("/sent", requireAuth, async (req, res) => {
       subject: j.subject,
       sentTime: j.sentAt,
       status: j.status === "SENT" ? "sent" : "failed",
+      hasAttachments: Array.isArray(j.attachments) && (j.attachments as any[]).length > 0,
+      previewUrl: j.previewUrl,
     }))
   );
 });
@@ -69,6 +72,8 @@ emailsRouter.get("/:id", requireAuth, async (req, res) => {
     scheduledTime: job.scheduledAt,
     sentTime: job.sentAt,
     failReason: job.failReason,
+    previewUrl: job.previewUrl,
+    attachments: (job.attachments as any[]) || [],
     createdAt: job.createdAt,
   });
 });

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../store";
-import { Filter, Refresh, Search, Star } from "../icons";
+import { Clip, Filter, Refresh, Search, Star } from "../icons";
 import { EmptyState, ListSkeleton, StatusPill, TimePill } from "../components/ui";
 import { fmtFull } from "../utils";
 
@@ -57,7 +57,10 @@ export default function EmailList({ kind }) {
             <li key={r.id} className="row" onClick={() => nav(`/email/${r.id}`)}>
               <span className="to">To: {r.email}</span>
               {isSent ? <StatusPill status={r.status} /> : <TimePill iso={r.scheduledTime} />}
-              <span className="subj"><b>{r.subject}</b></span>
+              <span className="subj">
+                <b>{r.subject}</b>
+                {r.hasAttachments && <span className="clip-indicator" title="Has attachments"><Clip size={13} /></span>}
+              </span>
               {isSent ? <time className="when">{fmtFull(r.sentTime)}</time> : <StatusPill status={r.status} />}
               <button className="star" onClick={(e) => toggleStar(e, r.id)} aria-label="Star"><Star on={stars.has(r.id)} size={16} /></button>
             </li>

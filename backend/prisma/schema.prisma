@@ -38,6 +38,7 @@ model Campaign {
   delayBetweenEmailsMs Int     @default(2000)
   hourlyLimit         Int     @default(100)
   startTime           DateTime
+  attachments         Json?
   createdAt           DateTime @default(now())
 
   jobs EmailJob[]
@@ -56,6 +57,8 @@ model EmailJob {
   scheduledAt DateTime    // the time we intend/intended to send at (updates if rescheduled)
   sentAt      DateTime?
   failReason  String?
+  previewUrl  String?
+  attachments Json?
 
   // BullMQ job id for this row — lets us look up / avoid re-adding the same job (idempotency)
   bullJobId   String?     @unique

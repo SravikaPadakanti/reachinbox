@@ -10,6 +10,7 @@ const AttachmentSchema = z.object({
   filename: z.string(),
   content: z.string(), // base64 string
   contentType: z.string().optional(),
+  size: z.number().optional(),
 });
 
 const ScheduleSchema = z.object({
@@ -41,6 +42,7 @@ scheduleRouter.post("/", requireAuth, async (req, res) => {
       delayBetweenEmailsMs: data.delayBetweenEmailsMs,
       hourlyLimit: data.hourlyLimit,
       startTime: data.startTime,
+      attachments: data.attachments as any,
     },
   });
 
@@ -63,6 +65,7 @@ scheduleRouter.post("/", requireAuth, async (req, res) => {
         fromSender: data.fromSender,
         status: "SCHEDULED",
         scheduledAt,
+        attachments: data.attachments as any,
       },
     });
 

@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:worker\"",
     "dev:server": "nodemon --exec ts-node src/index.ts",
     "dev:worker": "nodemon --exec ts-node src/workers/emailWorker.ts",
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && prisma db push --accept-data-loss && tsc",
     "start": "concurrently \"node dist/index.js\" \"node dist/workers/emailWorker.js\"",
     "start:server": "node dist/index.js",
     "start:worker": "node dist/workers/emailWorker.js",

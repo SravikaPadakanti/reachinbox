@@ -52,7 +52,7 @@ async function processEmailJob(job: Job<EmailJobPayload>) {
     });
     await prisma.emailJob.update({
       where: { id: emailJobId },
-      data: { status: "SENT", sentAt: new Date() },
+      data: { status: "SENT", sentAt: new Date(), previewUrl: previewUrl || null },
     });
     console.log(`[worker] sent ${emailJobId} to ${recipient} — preview: ${previewUrl}`);
   } catch (err: any) {
