@@ -18,7 +18,7 @@ A production-grade, distributed email scheduling service and dashboard built for
 - **Frontend (Vercel):** [https://reachinbox-sigma-umber.vercel.app](https://reachinbox-sigma-umber.vercel.app)
 - **Backend API (Render):** [https://reachinbox-1wr6.onrender.com](https://reachinbox-1wr6.onrender.com)
 - **API Health Check:** [https://reachinbox-1wr6.onrender.com/health](https://reachinbox-1wr6.onrender.com/health) (Returns `{"redis":"ok","postgres":"ok"}`)
-- **Demo Walkthrough Video:** [Watch Demo Recording](https://loom.com) *(Add your recording link here)*
+- **Demo Walkthrough Video:** [Watch Demo Recording]([https://loom.com](https://drive.google.com/file/d/12fubWs10YCl-HHLD5C9wKMjOX1re6VNo/view?usp=sharing)) 
 
 ---
 
