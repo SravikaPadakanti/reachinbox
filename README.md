@@ -18,6 +18,7 @@ A production-grade, distributed email scheduling service and dashboard built for
 - **Frontend (Vercel):** [https://reachinbox-sigma-umber.vercel.app](https://reachinbox-sigma-umber.vercel.app)
 - **Backend API (Render):** [https://reachinbox-1wr6.onrender.com](https://reachinbox-1wr6.onrender.com)
 - **API Health Check:** [https://reachinbox-1wr6.onrender.com/health](https://reachinbox-1wr6.onrender.com/health) (Returns `{"redis":"ok","postgres":"ok"}`)
+- **Demo Walkthrough Video:** [Watch Demo Recording](https://loom.com) *(Add your recording link here)*
 
 ---
 
@@ -320,42 +321,24 @@ npm test
 | `GET` | `/api/emails/scheduled` | **Yes** | Lists all upcoming scheduled/pending emails for the user |
 | `GET` | `/api/emails/sent` | **Yes** | Lists all sent and failed email jobs for the user |
 | `GET` | `/api/emails/:id` | **Yes** | Fetches full email details, body, preview link, and attachments |
+| `POST` | `/api/emails/:id/retry` | **Yes** | Re-queues a failed email for immediate send attempt |
+| `GET` | `/api/emails/:id/preview`| No | Public HTML email delivery inspector and body viewer |
 
 ---
 
-## 🎥 Demo Video Guide (Recommended Script for Submission)
+## 🎥 Demo Video
 
-When recording your 5-minute Loom / Drive demo video, follow this sequence:
-
-1. **Introduction & Live Architecture (1 min):**
-   - Show the app running live on Vercel: `https://reachinbox-sigma-umber.vercel.app`.
-   - Log in with Google. Show that user profile, name, and avatar appear in the header.
-2. **Scheduling & CSV Lead Upload (1.5 mins):**
-   - Click **Compose**. Show sender selection, subject, rich-text body.
-   - Upload a sample `.csv` or `.txt` file of email leads. Highlight the **"X detected"** badge.
-   - Attach a file (PDF or image). Show the attachment thumbnail and size badge.
-   - Set a scheduled time 1–2 minutes into the future and click **Send Later**.
-3. **Dashboard Inspection & Real-Time Transition (1 min):**
-   - Show the email appear in the **Scheduled** tab with a countdown/status pill.
-   - When the scheduled time arrives, refresh or observe the real-time transition to the **Sent** tab.
-   - Click the sent email to open the **Email Detail View**: show the sandboxed body, the **Attachments** card with download button, and click **View in Ethereal Mailbox ↗** to show the real message received on Ethereal SMTP.
-4. **Server Restart Scenario (1 min):**
-   - Schedule another email 2 minutes out.
-   - Open your terminal and kill the backend process (`Ctrl+C` or `docker stop`).
-   - Show that the frontend health indicator updates.
-   - Restart the backend (`npm run dev`).
-   - Show that the scheduled email was **not lost**, did not re-send early, and sends exactly on time.
-5. **Rate Limiting & Concurrency (30 secs):**
-   - Briefly reference the Redis atomic hourly counter (`MAX_EMAILS_PER_HOUR_PER_SENDER`) and explain that on rate limit, jobs are rescheduled into the next hour window rather than dropped.
+- **Walkthrough Video:** [Watch Loom / Drive Demo](https://loom.com) *(Paste your recording link here)*
 
 ---
 
-## 💡 Assumptions & Design Trade-offs
+## 💡 Key Design Decisions & Resilience
 
 1. **HMAC Token-Based Cross-Domain Auth:** Modern browsers enforce strict third-party cookie blocking when the frontend and backend live on separate domains (e.g., `vercel.app` and `onrender.com`). To prevent auth loops, the application implements cryptographically signed HMAC Bearer tokens passed via OAuth redirect and stored in `localStorage`, maintaining seamless cookie support for localhost.
-2. **Delayed Queue vs. Cron:** We strictly avoided cron polling. BullMQ delayed jobs are backed by Redis sorted sets (`ZSET`), allowing $O(\log N)$ insertion and instantaneous firing with millisecond precision.
-3. **Database as Single Source of Truth:** While BullMQ tracks active timers in Redis, every campaign and job row is stored in PostgreSQL first. If Redis were flushed, the startup reconciliation module can re-seed all pending jobs without duplicating already sent emails.
-4. **Ethereal SMTP Integration:** Because Ethereal is a test SMTP provider, every email send returns a unique `nodemailer.getTestMessageUrl(info)`. We persist this URL in PostgreSQL so evaluators can inspect the exact HTML and MIME attachments delivered by the worker.
+2. **Delayed Queue vs. Cron:** We strictly avoided cron polling. BullMQ delayed jobs are backed by Redis sorted sets (`ZSET`), allowing $O(\log N)$ insertion and instantaneous firing with millisecond precision without polling overhead.
+3. **Database as Single Source of Truth:** While BullMQ tracks active timers in Redis, every campaign and job row is stored in PostgreSQL first. If Redis were flushed, the startup reconciliation module (`reconcileOrphanedJobs`) re-seeds pending jobs without duplicating sent emails.
+4. **Resilient Mailer & Preview Inspector:** Dispatches through Ethereal SMTP with connection pooling and fast 4s timeouts. For cloud environments where hosting firewalls drop outbound SMTP ports (Render free tier blocks ports 25, 465, and 587), an internal HTTP test dispatcher guarantees delivery and generates an interactive preview (`/api/emails/:id/preview`).
+5. **Zero Drop Rate Limiting:** When the sliding hourly sender limit is reached, jobs are automatically rescheduled into the next hour window rather than dropped.
 
 ---
 
