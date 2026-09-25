@@ -52,13 +52,26 @@ async function processEmailJob(job: Job<EmailJobPayload>) {
     });
     await prisma.emailJob.update({
       where: { id: emailJobId },
-      data: { status: "SENT", sentAt: new Date(), previewUrl: previewUrl || null },
+      data: {
+        status: "SENT",
+        sentAt: new Date(),
+        failReason: null,
+        previewUrl: previewUrl || null,
+      },
     });
     console.log(`[worker] sent ${emailJobId} to ${recipient} — preview: ${previewUrl}`);
   } catch (err: any) {
+    const maxAttempts = job.opts.attempts || 3;
+    const isFinalAttempt = job.attemptsMade >= maxAttempts - 1;
+
     await prisma.emailJob.update({
       where: { id: emailJobId },
-      data: { status: "FAILED", failReason: err.message?.slice(0, 500) },
+      data: {
+        status: isFinalAttempt ? "FAILED" : "SCHEDULED",
+        failReason: isFinalAttempt
+          ? err.message?.slice(0, 500)
+          : `Retrying (attempt ${job.attemptsMade + 1}/${maxAttempts}): ${err.message?.slice(0, 300)}`,
+      },
     });
     throw err; // let BullMQ retry per defaultJobOptions.attempts
   }

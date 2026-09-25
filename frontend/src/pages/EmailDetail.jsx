@@ -2,19 +2,35 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { Back, Clip } from "../icons";
-import { EmptyState, StatusPill } from "../components/ui";
+import { Button, EmptyState, StatusPill, useToast } from "../components/ui";
 import { fmtFull } from "../utils";
 
 export default function EmailDetail() {
   const { id } = useParams();
   const nav = useNavigate();
+  const toast = useToast();
   const [mail, setMail] = useState(null);
   const [state, setState] = useState("loading"); // loading | ok | error
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     setState("loading");
     api.email(id).then((m) => { setMail(m); setState("ok"); }).catch(() => setState("error"));
   }, [id]);
+
+  const onRetry = async () => {
+    setRetrying(true);
+    try {
+      await api.retry(id);
+      toast("Email re-queued for immediate send!", "ok");
+      const updated = await api.email(id);
+      setMail(updated);
+    } catch (e) {
+      toast("Retry failed: " + e.message, "err");
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const downloadAttachment = (att) => {
     try {
@@ -70,6 +86,20 @@ export default function EmailDetail() {
               {mail.status !== "sent" && mail.status !== "failed" && <> · scheduled for {fmtFull(mail.scheduledTime)}</>}
               {mail.failReason && <span className="fail"> {mail.failReason}</span>}
             </p>
+
+            {mail.status === "failed" && (
+              <div style={{ marginTop: "8px", marginBottom: "8px" }}>
+                <Button
+                  className="pill-btn"
+                  onClick={onRetry}
+                  busy={retrying}
+                  busyText="Retrying…"
+                  style={{ background: "#DC2626", color: "#fff", borderColor: "#DC2626" }}
+                >
+                  🔄 Retry Sending Now
+                </Button>
+              </div>
+            )}
 
             {mail.previewUrl && (
               <div>

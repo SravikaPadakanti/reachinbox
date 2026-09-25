@@ -82,6 +82,7 @@ export const api = {
   scheduled: () => req("/api/emails/scheduled"),
   sent: () => req("/api/emails/sent"),
   email: (id) => req(`/api/emails/${id}`),
+  retry: (id) => req(`/api/emails/${id}/retry`, { method: "POST" }),
   schedule: (body) => req("/api/schedule", { method: "POST", body: JSON.stringify(body) }),
   // /health answers 503 with a JSON body when something is down, so don't throw on it
   health: async () => {

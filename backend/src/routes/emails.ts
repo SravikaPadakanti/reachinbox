@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
+import { enqueueEmailJob } from "../queues/emailQueue";
 
 export const emailsRouter = Router();
 
@@ -27,7 +28,7 @@ emailsRouter.get("/scheduled", requireAuth, async (req, res) => {
 emailsRouter.get("/sent", requireAuth, async (req, res) => {
   const jobs = await prisma.emailJob.findMany({
     where: { status: { in: ["SENT", "FAILED"] }, campaign: { userId: (req.user as any).id } },
-    orderBy: { sentAt: "desc" },
+    orderBy: { updatedAt: "desc" },
     take: 200,
   });
   res.json(
@@ -35,12 +36,61 @@ emailsRouter.get("/sent", requireAuth, async (req, res) => {
       id: j.id,
       email: j.recipient,
       subject: j.subject,
-      sentTime: j.sentAt,
+      sentTime: j.sentAt || j.updatedAt,
       status: j.status === "SENT" ? "sent" : "failed",
+      failReason: j.failReason,
       hasAttachments: Array.isArray(j.attachments) && (j.attachments as any[]).length > 0,
       previewUrl: j.previewUrl,
     }))
   );
+});
+
+// POST /api/emails/:id/retry
+emailsRouter.post("/:id/retry", requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const userId = (req.user as any).id;
+
+  const job = await prisma.emailJob.findUnique({
+    where: { id },
+    include: { campaign: true },
+  });
+
+  if (!job) {
+    return res.status(404).json({ error: "Email not found" });
+  }
+
+  if (job.campaign.userId !== userId && process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+  await prisma.emailJob.update({
+    where: { id },
+    data: {
+      status: "SCHEDULED",
+      failReason: null,
+      scheduledAt: new Date(),
+    },
+  });
+
+  const bullJob = await enqueueEmailJob(
+    {
+      emailJobId: job.id,
+      recipient: job.recipient,
+      subject: job.subject,
+      body: job.body,
+      fromSender: job.fromSender,
+      attachments: (job.attachments as any) || [],
+    },
+    new Date(),
+    `retry-${Date.now()}`
+  );
+
+  await prisma.emailJob.update({
+    where: { id },
+    data: { bullJobId: bullJob.id?.toString() },
+  });
+
+  res.json({ ok: true, id: job.id });
 });
 
 // GET /api/emails/:id

@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { env } from "../config/env";
 
 export const transporter = nodemailer.createTransport({
+  pool: true,
   host: env.etherealHost,
   port: env.etherealPort,
   secure: false,
@@ -9,6 +10,12 @@ export const transporter = nodemailer.createTransport({
     user: env.etherealUser,
     pass: env.etherealPass,
   },
+  maxConnections: 5,
+  maxMessages: 100,
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 45000,
+  dnsTimeout: 10000,
 });
 
 export interface MailAttachment {
@@ -39,8 +46,19 @@ export async function sendEmail(opts: {
     }));
   }
 
-  const info = await transporter.sendMail(mailOptions);
-  // Ethereal gives you a preview URL per message — handy for the demo video
-  const previewUrl = nodemailer.getTestMessageUrl(info);
-  return { messageId: info.messageId, previewUrl };
+  let lastErr: any;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      const previewUrl = nodemailer.getTestMessageUrl(info as any);
+      return { messageId: info.messageId, previewUrl };
+    } catch (err: any) {
+      lastErr = err;
+      console.warn(`[mailer] attempt ${attempt} error: ${err.message}`);
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+  }
+  throw lastErr;
 }
