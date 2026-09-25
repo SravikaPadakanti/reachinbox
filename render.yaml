@@ -15,7 +15,7 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        sync: false
+        value: https://reachinbox-sigma-umber.vercel.app
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL

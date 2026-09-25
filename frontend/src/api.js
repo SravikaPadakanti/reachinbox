@@ -1,4 +1,17 @@
-export const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const PROD_API_URL = "https://reachinbox-1wr6.onrender.com";
+
+const isLocalhost =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1");
+
+const envApi = import.meta.env.VITE_API_URL;
+export const API =
+  envApi && (!envApi.includes("localhost") || isLocalhost)
+    ? envApi
+    : isLocalhost
+    ? "http://localhost:4000"
+    : PROD_API_URL;
 
 async function req(path, opts = {}) {
   const res = await fetch(API + path, {
@@ -26,7 +39,10 @@ export function formatError(data) {
 }
 
 export const api = {
-  googleLoginUrl: `${API}/auth/google`,
+  get googleLoginUrl() {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return `${API}/auth/google?redirect_to=${encodeURIComponent(origin)}`;
+  },
   testLoginUrl: `${API}/auth/test-login`,
   login: (body = {}) => req("/auth/login", { method: "POST", body: JSON.stringify(body) }),
   me: () => req("/auth/me"),

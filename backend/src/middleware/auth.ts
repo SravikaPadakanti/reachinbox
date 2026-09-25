@@ -58,16 +58,48 @@ export function requireAuth(req: any, res: any, next: any) {
 
 authRouter.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  (req, res, next) => {
+    const rawRedirect =
+      (req.query.redirect_to as string) ||
+      (req.headers.referer as string) ||
+      env.frontendUrl;
+    let returnTo = env.frontendUrl;
+    try {
+      if (rawRedirect) {
+        const u = new URL(rawRedirect);
+        returnTo = u.origin;
+      }
+    } catch {}
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      state: returnTo,
+    })(req, res, next);
+  }
 );
 
 authRouter.get(
   "/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: `${env.frontendUrl}/login?error=1`,
-  }),
+  (req, res, next) => {
+    let target = env.frontendUrl;
+    if (typeof req.query.state === "string" && req.query.state.startsWith("http")) {
+      try {
+        const u = new URL(req.query.state);
+        target = u.origin;
+      } catch {}
+    }
+    passport.authenticate("google", {
+      failureRedirect: `${target}/login?error=1`,
+    })(req, res, next);
+  },
   (req, res) => {
-    res.redirect(`${env.frontendUrl}/dashboard`);
+    let target = env.frontendUrl;
+    if (typeof req.query.state === "string" && req.query.state.startsWith("http")) {
+      try {
+        const u = new URL(req.query.state);
+        target = u.origin;
+      } catch {}
+    }
+    res.redirect(`${target}/dashboard`);
   }
 );
 

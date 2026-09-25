@@ -12,11 +12,17 @@ function required(key: string): string {
   return val;
 }
 
+const DEFAULT_PROD_FRONTEND = "https://reachinbox-sigma-umber.vercel.app";
+
 export const env = {
   isProduction: process.env.NODE_ENV === "production",
   port: parseInt(process.env.PORT || "4000", 10),
   sessionSecret: required("SESSION_SECRET"),
-  frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+  frontendUrl:
+    process.env.FRONTEND_URL ||
+    (process.env.NODE_ENV === "production"
+      ? DEFAULT_PROD_FRONTEND
+      : "http://localhost:3000"),
 
   databaseUrl: required("DATABASE_URL"),
   redisUrl: required("REDIS_URL"),
