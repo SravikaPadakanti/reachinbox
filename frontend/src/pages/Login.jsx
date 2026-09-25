@@ -40,6 +40,14 @@ export default function Login() {
 
   return (
     <main className="login-page">
+      <header className="login-top-left">
+        <div className="logo">ONB</div>
+        <div className="brand-text">
+          <span className="app-title">ReachInbox</span>
+          <span className="app-tagline">Email Scheduler</span>
+        </div>
+      </header>
+
       <section className="login-card">
         <h1>Login</h1>
 
